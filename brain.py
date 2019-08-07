@@ -79,9 +79,6 @@ class Brain:
             feedforward = relu(np.dot(feedforward, layer))
         return feedforward[0]
 
-    # layer1 = sigmoid(np.dot(inputs, self.weights1))
-    # output = sigmoid(np.dot(layer1, self.weights2))
-
     def crossover(self, partner):
         child = Brain()
 

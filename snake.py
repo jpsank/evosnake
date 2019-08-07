@@ -4,19 +4,22 @@ from config import *
 
 
 class Snake:
-    def __init__(self, seed=None):
-        self.grid = Grid(GAME_WIDTH, GAME_HEIGHT, seed=seed)
+    def __init__(self, grid):
+        self.grid = grid
 
         self.drc = None
         self.length = 1
 
         self.body = []
-        self.head = self.grid.set(int(self.grid.rows/2), int(self.grid.cols/2), HEAD)
-
-        self.apple = self.grid.set_random(APPLE)
+        self.head = self.grid.set(int(self.grid.rows/2), int(self.grid.cols/2), SNAKE)
 
         self.steps = 0
         self.hunger = 0
+
+    def clear(self):
+        for b in self.body:
+            self.grid.set(*b, EMPTY)
+        self.grid.set(*self.head, EMPTY)
 
     def key_press(self, dir):
         backwards = turn_180(self.drc)
@@ -41,17 +44,12 @@ class Snake:
         return see
 
     def step(self):
-        if self.hunger >= 50+50*self.length:
-            return False
-        if self.hunger > 0 and self.steps == 0:
-            return False
-
         if self.drc is not None:
             r, c = self.offset_head(self.drc)
             under = self.grid.get(r, c)
             if under == APPLE:
                 self.length += 1
-                self.apple = self.grid.set_random(APPLE)
+                self.grid.set_apple()
                 self.hunger = 0
             elif under == SNAKE or under == WALL:
                 return False
@@ -63,29 +61,26 @@ class Snake:
             self.body.append(self.head)
             self.grid.set(*self.body[-1], SNAKE)
 
-            self.head = self.grid.set(r, c, HEAD)
+            self.head = self.grid.set(r, c, SNAKE)
 
             self.steps += 1
         self.hunger += 1
         return True
 
-    def one_hot_tile(self, tile):
-        keys = [EMPTY, APPLE, SNAKE, HEAD]
-        return [1 if k == tile else 0 for k in keys]
-
-    def one_hot_direction(self, direction):
-        keys = [EMPTY, APPLE, SNAKE, HEAD]
-        return [1 if k == direction else 0 for k in keys]
-
 
 class Grid:
-    def __init__(self, width, height, seed=None):
+    def __init__(self, width=GAME_WIDTH, height=GAME_HEIGHT, seed=None):
         self.cols = width
         self.rows = height
 
         self.random = random.Random(seed)
 
         self.array = np.full((self.rows, self.cols), EMPTY)
+
+        self.set_apple()
+
+    def set_apple(self):
+        self.set_random(APPLE)
 
     def set(self, r, c, val):
         self.array[r][c] = val

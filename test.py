@@ -1,59 +1,53 @@
 import os, time
+from matplotlib import pyplot
+import numpy as np
+import curses
 
-import snake
-import brain
 from config import *
+import main
+import brain
+import snake
+
+SCALE_X, SCALE_Y = 10, 5
+RAD = 1
 
 
-class Creature:
-    def __init__(self, bran, seed=None):
-        self.snake = snake.Snake(seed)
-        self.brain = bran
+def draw_brain(bran):
+    pyplot.figure()
+    for l, layer in enumerate(bran.layers):
+        for n, neuron in enumerate(layer):
+            x, y = l*SCALE_X, n*SCALE_Y
+            circle = pyplot.Circle((x, y), radius=RAD, fill=False)
+            pyplot.gca().add_patch(circle)
+            for w, weight in enumerate(neuron):
+                x2, y2 = (l+1)*SCALE_X, w*SCALE_Y
+                circle = pyplot.Circle((x2, y2), radius=RAD, fill=False)
+                pyplot.gca().add_patch(circle)
 
-        self.dead = False
-
-    def step(self):
-        self.brain.set_inputs(self.snake)
-        output = self.brain.predict()
-
-        keys = [UP, RIGHT, DOWN, LEFT]
-        index = output.argmax()
-        self.snake.key_press(keys[index])
-
-        if self.snake.step() is False:
-            self.dead = True
-
-
-def draw(creature, indent="", pre=""):
-    print(pre)
-    s = ""
-    for r in range(GAME_HEIGHT):
-        s += indent
-        for c in range(GAME_WIDTH):
-            cell = creature.snake.grid.get(r, c)
-            if cell == EMPTY:
-                s += "\033[0;107m  \033[0m"
-            elif cell == APPLE:
-                s += "\033[0;41m  \033[0m"
-            elif cell == SNAKE:
-                s += "\033[0;42m  \033[0m"
-            elif cell == HEAD:
-                if creature.dead:
-                    s += "\033[1;101;33m[]\033[0m"
-                else:
-                    s += "\033[1;42;33m[]\033[0m"
-        s += "\n"
-    print(s)
+                line = pyplot.Line2D((x, x2),
+                                     (y, y2),
+                                     linewidth=abs(weight),
+                                     color="r" if weight < 0 else "g")
+                pyplot.gca().add_line(line)
+    pyplot.axis('scaled')
+    pyplot.axis('off')
+    pyplot.title('Neural Network architecture', fontsize=15)
+    pyplot.show()
 
 
 if os.path.exists(SAVE_FP):
-    creature = Creature(brain.Brain(load=SAVE_FP))
+    print("Loading brain from save file...")
+    grid = snake.Grid()
+    creatures = [main.Creature(brain.Brain(load=SAVE_FP), grid) for c in range(2)]
+
     while True:
-        creature.step()
-        draw(creature, pre="Score: {}".format(creature.snake.length))
+        for i,c in enumerate(creatures):
+            if not c.dead:
+                c.step()
+            else:
+                c.snake.clear()
+                creatures[i] = main.Creature(brain.Brain(load=SAVE_FP), grid)
 
-        if creature.dead:
-            creature = Creature(brain.Brain(load=SAVE_FP))
-            time.sleep(0.25)
+        main.draw(grid)
 
-        time.sleep(0.02)
+        time.sleep(0.06)
